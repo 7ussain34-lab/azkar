@@ -1,0 +1,44 @@
+name: Azkar reminders
+
+on:
+  schedule:
+    # 21:05 UTC = 00:05 Riyadh time (UTC+3, no daylight saving).
+    - cron: "5 21 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "What to do"
+        type: choice
+        default: test
+        options:
+          - test
+          - dry-run
+          - schedule
+
+jobs:
+  azkar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Schedule notifications
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          CITY: ${{ vars.CITY || 'Riyadh' }}
+          COUNTRY: ${{ vars.COUNTRY || 'Saudi Arabia' }}
+          TIMEZONE: ${{ vars.TIMEZONE || 'Asia/Riyadh' }}
+          SABAH_OFFSET_MIN: ${{ vars.SABAH_OFFSET_MIN || '15' }}
+          MASA_OFFSET_MIN: ${{ vars.MASA_OFFSET_MIN || '15' }}
+          MODE: ${{ inputs.mode || 'schedule' }}
+        run: |
+          case "$MODE" in
+            test)    python send_azkar.py --test ;;
+            dry-run) python send_azkar.py --dry-run ;;
+            *)       python send_azkar.py ;;
+          esac
